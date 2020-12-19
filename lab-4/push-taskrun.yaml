@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: push-taskrun
+  namespace: cicd
+spec:
+  taskRef:
+    name: push-task
+  podTemplate:
+    securityContext:
+      runAsUser: 0
+    volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket

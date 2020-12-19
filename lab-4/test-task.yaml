@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: test-task
+  namespace: cicd
+spec:
+  params:
+    - name: imageName
+      type: string
+      description: The name of the docker image
+      default: alpinehelloworld
+  steps:
+    - name: test
+      image: docker
+      command:
+        - sh
+        - -c
+        - "
+          apk update && \
+          apk add --no-cache git curl && \
+          git clone https://github.com/heroku/alpinehelloworld.git && \
+          (docker rm -vf $(params.imageName) || echo 'container already deleted') && \
+          docker run --name $(params.imageName) -d -p 80:5000 -e PORT=5000 $(params.imageName) && \
+          sleep 5 && \
+          curl http://172.17.0.1 | grep -q 'Hello world!'
+          "
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: docker-socket
+          mountPath: /var/run/docker.sock
+
+    - name: cleanup-test
+      image: docker
+      command:
+        - sh
+        - -c
+        - "
+          docker rm -vf $(params.imageName)
+          "
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: docker-socket
+          mountPath: /var/run/docker.sock

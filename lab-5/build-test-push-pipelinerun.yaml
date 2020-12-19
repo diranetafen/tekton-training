@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: build-test-push-pipelinerun
+  namespace: cicd
+spec:
+  pipelineRef:
+    name: build-test-push-pipeline
+  podTemplate:
+    securityContext:
+      runAsUser: 0
+    volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket

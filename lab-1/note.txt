@@ -1,0 +1,14 @@
+# Installation de kubernetes avec minikube
+minikube start --vm-driver=docker --kubernetes-version=v1.19.4
+
+# Installation de l'auto-completion
+sudo yum install bash-completion -y
+echo 'source <(kubectl completion bash)' >>~/.bashrc
+# déconnectez-vous et reconectez-vous :-)
+
+# Installation de tekton
+kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+
+# Création du namespace cicd qui hébergera les ressources de nos pipelines
+kubectl create namespace cicd
+alias k='kubectl -n cicd'

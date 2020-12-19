@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: build-task
+  namespace: cicd
+spec:
+  params:
+    - name: imageName
+      type: string
+      description: The name of the docker image
+      default: alpinehelloworld
+  steps:
+    - name: build
+      image: docker
+      command:
+        - sh
+        - -c
+        - "
+          apk update && \
+          apk add --no-cache git && \
+          git clone https://github.com/heroku/alpinehelloworld.git && \
+          cd  alpinehelloworld && \
+          docker build -t $(params.imageName) .
+          "
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: docker-socket
+          mountPath: /var/run/docker.sock
