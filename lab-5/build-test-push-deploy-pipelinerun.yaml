@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: build-test-push-deploy-pipelinerun
+  namespace: cicd
+spec:
+  podTemplate:
+    securityContext:
+      runAsUser: 0
+    volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+  pipelineSpec:
+    tasks:
+      - name: build
+        taskRef:
+          name: build-task
+      - name: test
+        taskRef:
+          name: test-task
+        runAfter:
+          - build
+      - name: push
+        taskRef:
+          name: push-task
+        runAfter:
+          - test
+      - name: deploy
+        taskSpec:
+          params:
+          - name: manifest-deploy
+            type: string
+            default: "https://raw.githubusercontent.com/diranetafen/tekton-training/main/lab-5/alpinehelloworld-deployment.yaml"
+          steps:
+            - name: run-kubectl
+              image: lachlanevenson/k8s-kubectl
+              command: ["kubectl"]
+              args:
+                - "apply"
+                - "-f"
+                - "$(params.manifest-deploy)"
+        runAfter:
+          - push
