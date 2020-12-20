@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: push-task
+  namespace: cicd
+spec:
+  workspaces:
+  - name: dockerImageArtefact
+  params:
+    - name: imageName
+      type: string
+      description: The name of the docker image
+      default: alpinehelloworld
+  steps:
+    - name: push
+      image: docker
+      command:
+        - sh
+        - -c
+        - "
+          docker login --username dirane --password TOKEN && \
+          docker load < $(workspaces.dockerImageArtefact.path)/$(params.imageName).tar && \
+          docker tag $(params.imageName) dirane/$(params.imageName) && \
+          docker push dirane/$(params.imageName)
+          "
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: docker-socket
+          mountPath: /var/run/docker.sock

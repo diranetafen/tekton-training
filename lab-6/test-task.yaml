@@ -4,6 +4,8 @@ metadata:
   name: test-task
   namespace: cicd
 spec:
+  workspaces:
+  - name: dockerImageArtefact
   params:
     - name: imageName
       type: string
@@ -19,6 +21,7 @@ spec:
           apk update && \
           apk add --no-cache curl && \
           (docker rm -vf $(params.imageName) || echo 'container already deleted') && \
+          docker load < $(workspaces.dockerImageArtefact.path)/$(params.imageName).tar && \
           docker run --name $(params.imageName) -d -p 80:5000 -e PORT=5000 $(params.imageName) && \
           sleep 5 && \
           curl http://172.17.0.1 | grep -q 'Hello world!'
