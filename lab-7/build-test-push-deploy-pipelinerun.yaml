@@ -1,0 +1,88 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: build-test-push-deploy-pipelinerun
+  namespace: cicd
+spec:
+  workspaces:
+    - name: artefact
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 1Gi
+  podTemplate:
+    securityContext:
+      runAsUser: 0
+    volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+  resources:
+    - name: git-source-pipeline-level
+      resourceRef:
+        name: alpinehelloworld-git-source
+  pipelineSpec:
+    resources:
+      - name: git-source-pipeline-level
+        type: git
+    workspaces:
+    - name: artefact
+    tasks:
+      - name: build
+        resources:
+          inputs:
+            - name: git-source
+              resource: git-source-pipeline-level
+        taskRef:
+          name: build-task
+        workspaces:
+        - name: dockerImageArtefact
+          workspace: artefact
+      - name: test
+        taskRef:
+          name: test-task
+        workspaces:
+        - name: dockerImageArtefact
+          workspace: artefact
+        runAfter:
+          - build
+      - name: push
+        taskRef:
+          name: push-task
+        workspaces:
+        - name: dockerImageArtefact
+          workspace: artefact
+        runAfter:
+          - test
+      - name: deploy
+        resources:
+          inputs:
+            - name: git-source
+              resource: git-source-pipeline-level
+        when:
+        - input: "$(resources.inputs.git-source.revision)"
+          operator: in
+          values: ["master"]
+        taskSpec:
+          resources:
+            inputs:
+              - name: git-source
+                type: git
+          params:
+          - name: manifest-deploy
+            type: string
+            default: "https://raw.githubusercontent.com/diranetafen/tekton-training/main/lab-5/alpinehelloworld-deployment.yaml"
+          steps:
+            - name: run-kubectl
+              image: lachlanevenson/k8s-kubectl
+              command: ["kubectl"]
+              args:
+                - "apply"
+                - "-f"
+                - "$(params.manifest-deploy)"
+        runAfter:
+          - push
