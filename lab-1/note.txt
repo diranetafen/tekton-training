@@ -12,3 +12,10 @@ kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline
 # Création du namespace cicd qui hébergera les ressources de nos pipelines
 kubectl create namespace cicd
 alias k='kubectl -n cicd'
+
+# Configuration de la persistence des artefacts
+kubectl create configmap config-artifact-pvc \
+                         --from-literal=size=5Gi \
+                         --from-literal=storageClassName=standard \
+                         -o yaml -n tekton-pipelines \
+                         --dry-run=client | kubectl replace -f -
